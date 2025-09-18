@@ -6,8 +6,8 @@ A simple, elegant todo list web application with authentication for checking off
 
 - **Add Items**: Anyone can add new items to the todo list
 - **Check Off Items**: Only authenticated users can mark items as completed
-- **GitHub Gist Sync**: Sync your todos across devices using GitHub Gists
-- **Persistent Storage**: Items are saved locally and optionally in GitHub
+- **Shared GitHub Gist**: Everyone uses the same shared todo list stored in GitHub
+- **Real-time Sync**: Changes sync automatically across all users
 - **Responsive Design**: Works great on desktop and mobile devices
 - **Clean UI**: Modern, gradient design with smooth animations
 - **Real-time Timers**: Shows elapsed time since each item was created
@@ -23,17 +23,18 @@ A simple, elegant todo list web application with authentication for checking off
 - Once logged in, you can check off items by clicking the checkboxes
 - Click **"Logout"** to log out
 
-### GitHub Gist Sync (Optional)
-1. Click the **"Configure Gist"** button (⚙️ icon)
+### GitHub Shared List (Optional)
+1. Click the **"⚙️"** settings button 
 2. Get a GitHub Personal Access Token:
    - Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
    - Click "Generate new token (classic)"
    - Give it a name and select the **"gist"** scope
    - Copy the generated token
 3. Paste the token in the configuration modal
-4. Optionally enter an existing Gist ID, or leave blank to create a new one
-5. Click "Save Configuration"
-6. Your todos will now sync automatically to GitHub Gist!
+4. Click "Save Token"
+5. Your todos will now sync automatically with everyone else using the app!
+
+**Note**: This is a **shared** todo list - everyone who configures their GitHub token will see and can modify the same list.
 
 ## Running the Project
 
@@ -76,11 +77,12 @@ The application uses a simple password-based authentication system:
 - **Note**: This is for demonstration purposes only. In a production environment, you would implement proper server-side authentication.
 
 ### GitHub Gist Integration
+- **Shared List**: Everyone uses the same GitHub Gist for the todo list
 - **Token Storage**: Your GitHub token is stored locally in your browser
-- **Private Gists**: By default, creates private gists (not publicly visible)
+- **Public Gist**: The shared gist is public (readable by anyone)
 - **Auto-sync**: Automatically syncs when you add or complete items
-- **Cross-device**: Access your todos from any device with the same gist
-- **Backup**: Your todos are safely backed up in GitHub
+- **Collaborative**: All users share the same todo list
+- **Backup**: Todos are safely backed up in GitHub
 
 ## Browser Compatibility
 

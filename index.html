@@ -46,14 +46,13 @@
             <div id="gist-config-modal" class="modal hidden">
                 <div class="modal-content">
                     <span class="close">&times;</span>
-                    <h2>GitHub Gist Configuration</h2>
-                    <p class="config-info">Configure GitHub integration to sync your todos across devices.</p>
+                    <h2>GitHub Token Configuration</h2>
+                    <p class="config-info">Enter your GitHub token to access the shared todo list.</p>
                     <form id="gist-config-form">
                         <input type="password" id="github-token" placeholder="GitHub Personal Access Token" required>
-                        <input type="text" id="gist-id" placeholder="Gist ID (optional - leave blank to create new)">
                         <div class="config-buttons">
-                            <button type="submit" class="btn btn-primary">Save Configuration</button>
-                            <button type="button" id="clear-config-btn" class="btn btn-secondary">Clear Config</button>
+                            <button type="submit" class="btn btn-primary">Save Token</button>
+                            <button type="button" id="clear-config-btn" class="btn btn-secondary">Clear Token</button>
                         </div>
                     </form>
                     <div class="config-help">
@@ -64,6 +63,7 @@
                             <li>Select the "gist" scope</li>
                             <li>Copy the token and paste it above</li>
                         </ol>
+                        <p><strong>Note:</strong> This connects you to a shared todo list that everyone can see and edit!</p>
                     </div>
                 </div>
             </div>

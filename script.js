@@ -3,7 +3,9 @@ let isLoggedIn = false;
 let todoItems = [];
 let timerInterval = null;
 let githubToken = '';
-let gistId = '';
+
+// Shared gist configuration - everyone uses the same gist
+const SHARED_GIST_ID = 'YOUR_SHARED_GIST_ID_HERE'; // Replace with actual gist ID
 
 // Simple password for authentication (in a real app, this would be handled server-side)
 const ADMIN_PASSWORD = "admin123";
@@ -27,7 +29,6 @@ const todoItemsList = document.getElementById('todo-items');
 const passwordInput = document.getElementById('password');
 const newItemInput = document.getElementById('new-item-text');
 const githubTokenInput = document.getElementById('github-token');
-const gistIdInput = document.getElementById('gist-id');
 const syncStatus = document.getElementById('sync-status');
 const clearConfigBtn = document.getElementById('clear-config-btn');
 
@@ -39,6 +40,11 @@ function init() {
     renderTodoItems();
     startTimers();
     updateSyncButton();
+    
+    // Auto-load from shared gist if token is available
+    if (githubToken && SHARED_GIST_ID !== 'YOUR_SHARED_GIST_ID_HERE') {
+        syncFromGist();
+    }
 }
 
 // Set up all event listeners
@@ -174,7 +180,7 @@ function handleAddItem(e) {
         showNotification('Item added successfully!', 'success');
         
         // Auto-sync to gist if configured
-        if (githubToken && gistId) {
+        if (githubToken && SHARED_GIST_ID !== 'YOUR_SHARED_GIST_ID_HERE') {
             syncToGist();
         }
     }
@@ -197,7 +203,7 @@ function toggleItem(id) {
         showNotification(`Item ${action}!`, 'success');
         
         // Auto-sync to gist if configured
-        if (githubToken && gistId) {
+        if (githubToken && SHARED_GIST_ID !== 'YOUR_SHARED_GIST_ID_HERE') {
             syncToGist();
         }
     }
@@ -332,9 +338,8 @@ document.addEventListener('DOMContentLoaded', init);
 function handleSyncClick() {
     if (!githubToken) {
         showGistConfigModal();
-    } else if (!gistId) {
-        // If we have a token but no gist ID, create a new gist
-        createNewGist();
+    } else if (SHARED_GIST_ID === 'YOUR_SHARED_GIST_ID_HERE') {
+        showNotification('Shared gist not configured. Please update SHARED_GIST_ID in the code.', 'warning');
     } else {
         syncFromGist();
     }
@@ -343,7 +348,6 @@ function handleSyncClick() {
 function showGistConfigModal() {
     // Populate current values
     githubTokenInput.value = githubToken || '';
-    gistIdInput.value = gistId || '';
     
     gistConfigModal.classList.remove('hidden');
     githubTokenInput.focus();
@@ -352,123 +356,60 @@ function showGistConfigModal() {
 function handleGistConfig(e) {
     e.preventDefault();
     const token = githubTokenInput.value.trim();
-    const gistIdValue = gistIdInput.value.trim();
     
     if (token) {
         githubToken = token;
-        gistId = gistIdValue;
         saveGistConfig();
         updateSyncButton();
         closeModals();
-        showNotification('GitHub configuration saved!', 'success');
+        showNotification('GitHub token saved! Now syncing with shared todo list.', 'success');
         
-        if (gistId) {
+        // Load from shared gist
+        if (SHARED_GIST_ID !== 'YOUR_SHARED_GIST_ID_HERE') {
             syncFromGist();
-        } else {
-            createNewGist();
         }
     }
 }
 
 function loadGistConfig() {
     const savedToken = localStorage.getItem('swags-todo-github-token');
-    const savedGistId = localStorage.getItem('swags-todo-gist-id');
     
     if (savedToken) {
         githubToken = savedToken;
-    }
-    if (savedGistId) {
-        gistId = savedGistId;
     }
 }
 
 function saveGistConfig() {
     localStorage.setItem('swags-todo-github-token', githubToken);
-    if (gistId) {
-        localStorage.setItem('swags-todo-gist-id', gistId);
-    }
 }
 
 function clearGistConfig() {
     githubToken = '';
-    gistId = '';
     localStorage.removeItem('swags-todo-github-token');
-    localStorage.removeItem('swags-todo-gist-id');
     githubTokenInput.value = '';
-    gistIdInput.value = '';
     updateSyncButton();
     closeModals();
-    showNotification('GitHub configuration cleared!', 'info');
+    showNotification('GitHub token cleared!', 'info');
 }
 
 function updateSyncButton() {
     if (!githubToken) {
-        syncStatus.textContent = '⚙️ Configure Gist';
+        syncStatus.textContent = '⚙️ Configure Token';
         syncBtn.className = 'btn btn-secondary';
-        syncBtn.title = 'Click to configure GitHub Gist integration';
-    } else if (!gistId) {
-        syncStatus.textContent = '📤 Create Gist';
-        syncBtn.className = 'btn btn-primary';
-        syncBtn.title = 'Click to create new gist';
+        syncBtn.title = 'Click to add your GitHub token';
+    } else if (SHARED_GIST_ID === 'YOUR_SHARED_GIST_ID_HERE') {
+        syncStatus.textContent = '❌ Not Configured';
+        syncBtn.className = 'btn btn-secondary';
+        syncBtn.title = 'Shared gist ID not set in code';
     } else {
-        syncStatus.textContent = '🔄 Sync';
+        syncStatus.textContent = '🔄 Sync Shared List';
         syncBtn.className = 'btn btn-sync';
-        syncBtn.title = 'Click to sync with GitHub Gist';
-    }
-}
-
-async function createNewGist() {
-    try {
-        syncStatus.textContent = '📤 Creating...';
-        
-        const gistData = {
-            description: "Swag's Todo List - Synced from web app",
-            public: false,
-            files: {
-                [GIST_FILENAME]: {
-                    content: JSON.stringify({
-                        todos: todoItems,
-                        lastUpdated: new Date().toISOString()
-                    }, null, 2)
-                }
-            }
-        };
-        
-        const response = await fetch(`${GITHUB_API_BASE}/gists`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `token ${githubToken}`,
-                'Accept': 'application/vnd.github.v3+json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(gistData)
-        });
-        
-        if (response.ok) {
-            const result = await response.json();
-            gistId = result.id;
-            saveGistConfig();
-            updateSyncButton();
-            showNotification(`Gist created! ID: ${gistId}`, 'success');
-        } else {
-            const errorText = await response.text();
-            throw new Error(`Failed to create gist: ${response.status} - ${errorText}`);
-        }
-    } catch (error) {
-        console.error('Error creating gist:', error);
-        if (error.message.includes('401')) {
-            showNotification('Invalid GitHub token. Please check your token.', 'error');
-        } else if (error.message.includes('403')) {
-            showNotification('Token lacks gist permissions. Please create a new token with gist scope.', 'error');
-        } else {
-            showNotification('Failed to create gist. Check your token and try again.', 'error');
-        }
-        updateSyncButton();
+        syncBtn.title = 'Click to sync with shared todo list';
     }
 }
 
 async function syncToGist() {
-    if (!githubToken || !gistId) return;
+    if (!githubToken || SHARED_GIST_ID === 'YOUR_SHARED_GIST_ID_HERE') return;
     
     try {
         const gistData = {
@@ -482,7 +423,7 @@ async function syncToGist() {
             }
         };
         
-        const response = await fetch(`${GITHUB_API_BASE}/gists/${gistId}`, {
+        const response = await fetch(`${GITHUB_API_BASE}/gists/${SHARED_GIST_ID}`, {
             method: 'PATCH',
             headers: {
                 'Authorization': `token ${githubToken}`,
@@ -493,7 +434,7 @@ async function syncToGist() {
         });
         
         if (response.ok) {
-            showNotification('✅ Synced to GitHub!', 'success');
+            showNotification('✅ Synced to shared list!', 'success');
         } else {
             const errorText = await response.text();
             throw new Error(`Failed to sync: ${response.status} - ${errorText}`);
@@ -509,12 +450,12 @@ async function syncToGist() {
 }
 
 async function syncFromGist() {
-    if (!githubToken || !gistId) return;
+    if (!githubToken || SHARED_GIST_ID === 'YOUR_SHARED_GIST_ID_HERE') return;
     
     try {
         syncStatus.textContent = '📥 Loading...';
         
-        const response = await fetch(`${GITHUB_API_BASE}/gists/${gistId}`, {
+        const response = await fetch(`${GITHUB_API_BASE}/gists/${SHARED_GIST_ID}`, {
             headers: {
                 'Authorization': `token ${githubToken}`,
                 'Accept': 'application/vnd.github.v3+json'
@@ -530,9 +471,9 @@ async function syncFromGist() {
                 todoItems = data.todos || [];
                 saveTodoItems();
                 renderTodoItems();
-                showNotification('📥 Loaded from GitHub!', 'success');
+                showNotification('📥 Loaded shared todo list!', 'success');
             } else {
-                showNotification('No todo data found in gist.', 'warning');
+                showNotification('No todo data found in shared gist.', 'warning');
             }
         } else {
             const errorText = await response.text();
@@ -543,7 +484,7 @@ async function syncFromGist() {
         if (error.message.includes('401') || error.message.includes('403')) {
             showNotification('Authentication failed. Please reconfigure your GitHub token.', 'error');
         } else if (error.message.includes('404')) {
-            showNotification('Gist not found. It may have been deleted.', 'error');
+            showNotification('Shared gist not found. Please check the gist ID.', 'error');
         } else {
             showNotification('Failed to load from GitHub. Check your connection.', 'error');
         }
