@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swag's ToDo List</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Swag's ToDo List</h1>
+            <div class="header-buttons">
+                <button id="add-item-btn" class="btn btn-primary">Add New Item</button>
+                <button id="login-btn" class="btn btn-secondary">Login</button>
+            </div>
+        </header>
+
+        <main>
+            <div id="login-modal" class="modal hidden">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h2>Login</h2>
+                    <form id="login-form">
+                        <input type="password" id="password" placeholder="Enter password" required>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="add-item-modal" class="modal hidden">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h2>Add New Item</h2>
+                    <form id="add-item-form">
+                        <input type="text" id="new-item-text" placeholder="Enter new item" required>
+                        <button type="submit" class="btn btn-primary">Add Item</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="todo-list">
+                <ul id="todo-items">
+                    <!-- Todo items will be dynamically added here -->
+                </ul>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
