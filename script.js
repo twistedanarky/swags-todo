@@ -16,6 +16,7 @@ const GIST_FILENAME = 'swags-todo-list.json';
 const loginBtn = document.getElementById('login-btn');
 const addItemBtn = document.getElementById('add-item-btn');
 const syncBtn = document.getElementById('sync-btn');
+const gistSettingsBtn = document.getElementById('gist-settings-btn');
 const loginModal = document.getElementById('login-modal');
 const addItemModal = document.getElementById('add-item-modal');
 const gistConfigModal = document.getElementById('gist-config-modal');
@@ -50,6 +51,9 @@ function setupEventListeners() {
     
     // Sync button
     syncBtn.addEventListener('click', handleSyncClick);
+    
+    // Gist settings button
+    gistSettingsBtn.addEventListener('click', showGistConfigModal);
     
     // Form submissions
     loginForm.addEventListener('submit', handleLogin);
@@ -328,12 +332,19 @@ document.addEventListener('DOMContentLoaded', init);
 function handleSyncClick() {
     if (!githubToken) {
         showGistConfigModal();
+    } else if (!gistId) {
+        // If we have a token but no gist ID, create a new gist
+        createNewGist();
     } else {
         syncFromGist();
     }
 }
 
 function showGistConfigModal() {
+    // Populate current values
+    githubTokenInput.value = githubToken || '';
+    gistIdInput.value = gistId || '';
+    
     gistConfigModal.classList.remove('hidden');
     githubTokenInput.focus();
 }
@@ -440,11 +451,18 @@ async function createNewGist() {
             updateSyncButton();
             showNotification(`Gist created! ID: ${gistId}`, 'success');
         } else {
-            throw new Error(`Failed to create gist: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`Failed to create gist: ${response.status} - ${errorText}`);
         }
     } catch (error) {
         console.error('Error creating gist:', error);
-        showNotification('Failed to create gist. Check your token.', 'error');
+        if (error.message.includes('401')) {
+            showNotification('Invalid GitHub token. Please check your token.', 'error');
+        } else if (error.message.includes('403')) {
+            showNotification('Token lacks gist permissions. Please create a new token with gist scope.', 'error');
+        } else {
+            showNotification('Failed to create gist. Check your token and try again.', 'error');
+        }
         updateSyncButton();
     }
 }
@@ -477,11 +495,16 @@ async function syncToGist() {
         if (response.ok) {
             showNotification('✅ Synced to GitHub!', 'success');
         } else {
-            throw new Error(`Failed to sync: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`Failed to sync: ${response.status} - ${errorText}`);
         }
     } catch (error) {
         console.error('Error syncing to gist:', error);
-        showNotification('Failed to sync to GitHub.', 'error');
+        if (error.message.includes('401') || error.message.includes('403')) {
+            showNotification('Authentication failed. Please reconfigure your GitHub token.', 'error');
+        } else {
+            showNotification('Failed to sync to GitHub. Check your connection.', 'error');
+        }
     }
 }
 
@@ -512,11 +535,18 @@ async function syncFromGist() {
                 showNotification('No todo data found in gist.', 'warning');
             }
         } else {
-            throw new Error(`Failed to load gist: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`Failed to load gist: ${response.status} - ${errorText}`);
         }
     } catch (error) {
         console.error('Error loading from gist:', error);
-        showNotification('Failed to load from GitHub.', 'error');
+        if (error.message.includes('401') || error.message.includes('403')) {
+            showNotification('Authentication failed. Please reconfigure your GitHub token.', 'error');
+        } else if (error.message.includes('404')) {
+            showNotification('Gist not found. It may have been deleted.', 'error');
+        } else {
+            showNotification('Failed to load from GitHub. Check your connection.', 'error');
+        }
     } finally {
         updateSyncButton();
     }
