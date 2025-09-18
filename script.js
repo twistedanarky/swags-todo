@@ -2,27 +2,42 @@
 let isLoggedIn = false;
 let todoItems = [];
 let timerInterval = null;
+let githubToken = '';
+let gistId = '';
 
 // Simple password for authentication (in a real app, this would be handled server-side)
 const ADMIN_PASSWORD = "admin123";
 
+// GitHub API configuration
+const GITHUB_API_BASE = 'https://api.github.com';
+const GIST_FILENAME = 'swags-todo-list.json';
+
 // DOM elements
 const loginBtn = document.getElementById('login-btn');
 const addItemBtn = document.getElementById('add-item-btn');
+const syncBtn = document.getElementById('sync-btn');
 const loginModal = document.getElementById('login-modal');
 const addItemModal = document.getElementById('add-item-modal');
+const gistConfigModal = document.getElementById('gist-config-modal');
 const loginForm = document.getElementById('login-form');
 const addItemForm = document.getElementById('add-item-form');
+const gistConfigForm = document.getElementById('gist-config-form');
 const todoItemsList = document.getElementById('todo-items');
 const passwordInput = document.getElementById('password');
 const newItemInput = document.getElementById('new-item-text');
+const githubTokenInput = document.getElementById('github-token');
+const gistIdInput = document.getElementById('gist-id');
+const syncStatus = document.getElementById('sync-status');
+const clearConfigBtn = document.getElementById('clear-config-btn');
 
 // Initialize the application
 function init() {
     setupEventListeners();
+    loadGistConfig();
     loadTodoItems();
     renderTodoItems();
     startTimers();
+    updateSyncButton();
 }
 
 // Set up all event listeners
@@ -33,9 +48,16 @@ function setupEventListeners() {
     // Add item button
     addItemBtn.addEventListener('click', showAddItemModal);
     
+    // Sync button
+    syncBtn.addEventListener('click', handleSyncClick);
+    
     // Form submissions
     loginForm.addEventListener('submit', handleLogin);
     addItemForm.addEventListener('submit', handleAddItem);
+    gistConfigForm.addEventListener('submit', handleGistConfig);
+    
+    // Clear config button
+    clearConfigBtn.addEventListener('click', clearGistConfig);
     
     // Modal close buttons
     document.querySelectorAll('.close').forEach(closeBtn => {
@@ -84,6 +106,7 @@ function showAddItemModal() {
 function closeModals() {
     loginModal.classList.add('hidden');
     addItemModal.classList.add('hidden');
+    gistConfigModal.classList.add('hidden');
     passwordInput.value = '';
     newItemInput.value = '';
 }
@@ -145,6 +168,11 @@ function handleAddItem(e) {
         renderTodoItems();
         closeModals();
         showNotification('Item added successfully!', 'success');
+        
+        // Auto-sync to gist if configured
+        if (githubToken && gistId) {
+            syncToGist();
+        }
     }
 }
 
@@ -163,6 +191,11 @@ function toggleItem(id) {
         
         const action = item.completed ? 'completed' : 'unchecked';
         showNotification(`Item ${action}!`, 'success');
+        
+        // Auto-sync to gist if configured
+        if (githubToken && gistId) {
+            syncToGist();
+        }
     }
 }
 
@@ -290,6 +323,204 @@ function showNotification(message, type = 'info') {
 
 // Initialize the application when the page loads
 document.addEventListener('DOMContentLoaded', init);
+
+// GitHub Gist Integration
+function handleSyncClick() {
+    if (!githubToken) {
+        showGistConfigModal();
+    } else {
+        syncFromGist();
+    }
+}
+
+function showGistConfigModal() {
+    gistConfigModal.classList.remove('hidden');
+    githubTokenInput.focus();
+}
+
+function handleGistConfig(e) {
+    e.preventDefault();
+    const token = githubTokenInput.value.trim();
+    const gistIdValue = gistIdInput.value.trim();
+    
+    if (token) {
+        githubToken = token;
+        gistId = gistIdValue;
+        saveGistConfig();
+        updateSyncButton();
+        closeModals();
+        showNotification('GitHub configuration saved!', 'success');
+        
+        if (gistId) {
+            syncFromGist();
+        } else {
+            createNewGist();
+        }
+    }
+}
+
+function loadGistConfig() {
+    const savedToken = localStorage.getItem('swags-todo-github-token');
+    const savedGistId = localStorage.getItem('swags-todo-gist-id');
+    
+    if (savedToken) {
+        githubToken = savedToken;
+    }
+    if (savedGistId) {
+        gistId = savedGistId;
+    }
+}
+
+function saveGistConfig() {
+    localStorage.setItem('swags-todo-github-token', githubToken);
+    if (gistId) {
+        localStorage.setItem('swags-todo-gist-id', gistId);
+    }
+}
+
+function clearGistConfig() {
+    githubToken = '';
+    gistId = '';
+    localStorage.removeItem('swags-todo-github-token');
+    localStorage.removeItem('swags-todo-gist-id');
+    githubTokenInput.value = '';
+    gistIdInput.value = '';
+    updateSyncButton();
+    closeModals();
+    showNotification('GitHub configuration cleared!', 'info');
+}
+
+function updateSyncButton() {
+    if (!githubToken) {
+        syncStatus.textContent = '⚙️ Configure Gist';
+        syncBtn.className = 'btn btn-secondary';
+        syncBtn.title = 'Click to configure GitHub Gist integration';
+    } else if (!gistId) {
+        syncStatus.textContent = '📤 Create Gist';
+        syncBtn.className = 'btn btn-primary';
+        syncBtn.title = 'Click to create new gist';
+    } else {
+        syncStatus.textContent = '🔄 Sync';
+        syncBtn.className = 'btn btn-sync';
+        syncBtn.title = 'Click to sync with GitHub Gist';
+    }
+}
+
+async function createNewGist() {
+    try {
+        syncStatus.textContent = '📤 Creating...';
+        
+        const gistData = {
+            description: "Swag's Todo List - Synced from web app",
+            public: false,
+            files: {
+                [GIST_FILENAME]: {
+                    content: JSON.stringify({
+                        todos: todoItems,
+                        lastUpdated: new Date().toISOString()
+                    }, null, 2)
+                }
+            }
+        };
+        
+        const response = await fetch(`${GITHUB_API_BASE}/gists`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `token ${githubToken}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(gistData)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            gistId = result.id;
+            saveGistConfig();
+            updateSyncButton();
+            showNotification(`Gist created! ID: ${gistId}`, 'success');
+        } else {
+            throw new Error(`Failed to create gist: ${response.status}`);
+        }
+    } catch (error) {
+        console.error('Error creating gist:', error);
+        showNotification('Failed to create gist. Check your token.', 'error');
+        updateSyncButton();
+    }
+}
+
+async function syncToGist() {
+    if (!githubToken || !gistId) return;
+    
+    try {
+        const gistData = {
+            files: {
+                [GIST_FILENAME]: {
+                    content: JSON.stringify({
+                        todos: todoItems,
+                        lastUpdated: new Date().toISOString()
+                    }, null, 2)
+                }
+            }
+        };
+        
+        const response = await fetch(`${GITHUB_API_BASE}/gists/${gistId}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `token ${githubToken}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(gistData)
+        });
+        
+        if (response.ok) {
+            showNotification('✅ Synced to GitHub!', 'success');
+        } else {
+            throw new Error(`Failed to sync: ${response.status}`);
+        }
+    } catch (error) {
+        console.error('Error syncing to gist:', error);
+        showNotification('Failed to sync to GitHub.', 'error');
+    }
+}
+
+async function syncFromGist() {
+    if (!githubToken || !gistId) return;
+    
+    try {
+        syncStatus.textContent = '📥 Loading...';
+        
+        const response = await fetch(`${GITHUB_API_BASE}/gists/${gistId}`, {
+            headers: {
+                'Authorization': `token ${githubToken}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+        
+        if (response.ok) {
+            const gist = await response.json();
+            const fileContent = gist.files[GIST_FILENAME];
+            
+            if (fileContent) {
+                const data = JSON.parse(fileContent.content);
+                todoItems = data.todos || [];
+                saveTodoItems();
+                renderTodoItems();
+                showNotification('📥 Loaded from GitHub!', 'success');
+            } else {
+                showNotification('No todo data found in gist.', 'warning');
+            }
+        } else {
+            throw new Error(`Failed to load gist: ${response.status}`);
+        }
+    } catch (error) {
+        console.error('Error loading from gist:', error);
+        showNotification('Failed to load from GitHub.', 'error');
+    } finally {
+        updateSyncButton();
+    }
+}
 
 // Timer functionality
 function startTimers() {

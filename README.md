@@ -6,9 +6,11 @@ A simple, elegant todo list web application with authentication for checking off
 
 - **Add Items**: Anyone can add new items to the todo list
 - **Check Off Items**: Only authenticated users can mark items as completed
-- **Persistent Storage**: Items are saved in browser's localStorage
+- **GitHub Gist Sync**: Sync your todos across devices using GitHub Gists
+- **Persistent Storage**: Items are saved locally and optionally in GitHub
 - **Responsive Design**: Works great on desktop and mobile devices
 - **Clean UI**: Modern, gradient design with smooth animations
+- **Real-time Timers**: Shows elapsed time since each item was created
 
 ## How to Use
 
@@ -20,6 +22,18 @@ A simple, elegant todo list web application with authentication for checking off
 - Click the **"Login"** button and enter the password: `admin123`
 - Once logged in, you can check off items by clicking the checkboxes
 - Click **"Logout"** to log out
+
+### GitHub Gist Sync (Optional)
+1. Click the **"Configure Gist"** button (⚙️ icon)
+2. Get a GitHub Personal Access Token:
+   - Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+   - Click "Generate new token (classic)"
+   - Give it a name and select the **"gist"** scope
+   - Copy the generated token
+3. Paste the token in the configuration modal
+4. Optionally enter an existing Gist ID, or leave blank to create a new one
+5. Click "Save Configuration"
+6. Your todos will now sync automatically to GitHub Gist!
 
 ## Running the Project
 
@@ -54,11 +68,19 @@ swags-todo/
 - **JavaScript (ES6+)**: Interactive functionality and state management
 - **localStorage**: Client-side data persistence
 
-## Authentication
+## Authentication & Sync
 
+### Authentication
 The application uses a simple password-based authentication system:
 - **Default Password**: `admin123`
 - **Note**: This is for demonstration purposes only. In a production environment, you would implement proper server-side authentication.
+
+### GitHub Gist Integration
+- **Token Storage**: Your GitHub token is stored locally in your browser
+- **Private Gists**: By default, creates private gists (not publicly visible)
+- **Auto-sync**: Automatically syncs when you add or complete items
+- **Cross-device**: Access your todos from any device with the same gist
+- **Backup**: Your todos are safely backed up in GitHub
 
 ## Browser Compatibility
 
